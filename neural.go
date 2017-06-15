@@ -11,7 +11,7 @@ import (
 	 "fmt"
 	 // "io"
 	 "math"
-	 "bufio"
+	 // "bufio"
 	 "os"
 	 "strconv"
 	 "math/rand"
@@ -23,7 +23,7 @@ type Neuron struct{
 	id int 						// these only here to track process
 	weight float64
 	nonActivatedWeight float64
-	connections [] Synapse
+	connections [] *Synapse
 	
 }
 // Synapses are the connections between neurons
@@ -35,7 +35,7 @@ type Synapse struct{
 
 func main() {
 
-	const input := os.Args[1:]
+	var input = os.Args[1:]
 	fmt.Println(input);
 	/*  arguments : 
 		aka the weights of input nodes..
@@ -48,25 +48,42 @@ func main() {
 	// check if the right amount of arguments were inputted..? "inputed"?
 	fmt.Println("Ayo - Creating Neural Network");
 	var in ,hid ,out = initNetwork(input);
-	runSimulation(in,hid,out);
+	// MAKE IT SO YOU CAN CHANGE ITERATIONS DEPENDING ON INPUT******TODO
+	 for i:=0; i<5;i++{
+		for _ , element := range hid{
+			for index , ele := range element.connections{
+				fmt.Printf("%d : %f \n", index, ele.value);
+			}
+			//printSynapseValues(element.connections);
+		}
+		runSimulation(in,hid,out, input);
+		// for _ , element := range hid{
+		// 	printSynapseValues(element.connections);
+		// }
+	 }
 
-
-	reader := bufio.NewReader(os.Stdin)
-    fmt.Print("Enter text: ")
-    text, _ := reader.ReadString('\n')
-    fmt.Println(text)
+	// reader := bufio.NewReader(os.Stdin)
+ //    fmt.Print("Enter text: ")
+ //    text, _ := reader.ReadString('\n')
+ //    fmt.Println(text)
 }
 
 // intialise all elements needed for network to work
 // may have to take input
-func initNetwork(inputValues [] string )([] Neuron, [] Neuron, [] Neuron){
+
+func printSynapseValues(synapses [] Synapse){
+	for index , ele := range synapses{
+		fmt.Printf("%d : %f \n", index, ele.value);
+	}
+}
+func initNetwork(inputValues [] string )([] * Neuron, [] * Neuron, [] * Neuron){
 	// create input nodes -- 
 	var hidNodesLen = 3
 	var outNodesLen = 1
 	// going to hardcore number of neurons for now ******
-	hidNodes := make([] Neuron, 0);
-	inNodes := make([] Neuron, 0);
-	outNodes := make([] Neuron, 0);
+	hidNodes := make([]* Neuron, 0);
+	inNodes := make([]* Neuron, 0);
+	outNodes := make([]* Neuron, 0);
 	// create input Neurons
 	for index, element := range inputValues{
 		var current = new(Neuron);
@@ -77,7 +94,7 @@ func initNetwork(inputValues [] string )([] Neuron, [] Neuron, [] Neuron){
 		}
 		current.weight = weight;
 		current.nonActivatedWeight = 0;
-		inNodes = append(inNodes, *current);
+		inNodes = append(inNodes, current);
 	}
 	// create hidden Neurons
 	for  i:=0 ; i<hidNodesLen; i++ {
@@ -85,7 +102,7 @@ func initNetwork(inputValues [] string )([] Neuron, [] Neuron, [] Neuron){
 		current.id = i;
 		current.weight = 0;
 		current.nonActivatedWeight = 0;
-		hidNodes = append(hidNodes, *current);
+		hidNodes = append(hidNodes, current);
 
 	}
 	// create output Neurons
@@ -93,62 +110,59 @@ func initNetwork(inputValues [] string )([] Neuron, [] Neuron, [] Neuron){
 		var current = new(Neuron);
 		current.id = i;
 		current.weight = 0;
-		outNodes = append(outNodes, *current);
+		current.nonActivatedWeight = 0;
+		outNodes = append(outNodes, current);
 	}
 	// add synpases?
-	fmt.Println("About to addSynapses");
 	addSynapses(inNodes, hidNodes, outNodes);
 
 
 	return inNodes, hidNodes, outNodes;
 }
 // dont really need a slice of out neurons if assuming there is only one rn.. but may be useful when scaling
-func addSynapses(in [] Neuron, hid [] Neuron, out [] Neuron){
+func addSynapses(in [] *Neuron, hid [] *Neuron, out [] *Neuron){
 	// var lenFrontSynapses = len(in)*len(hid);
 	// adding the front synapses
-	fmt.Println("length of in =%d", len(in));
-	fmt.Println("length of hid =%d", len(hid));
-	fmt.Println("length of out =%d", len(out));
 	for i:=0; i<len(in); i++ {
 		for j:=0; j<len(hid); j++{
 			var synapse = new(Synapse);										// creating synapse/connection
-			synapse.front = &in[i];
-			synapse.back = &hid[j];
+			synapse.front = in[i];
+			synapse.back = hid[j];
 			synapse.value = myGaussian();
-			fmt.Println("value : %f" ,synapse.value);
-			in[i].connections = append(in[i].connections, *synapse);		// adding synapse to both neurons
-			hid[j].connections = append(hid[j].connections, *synapse);
+			in[i].connections = append(in[i].connections, synapse);		// adding synapse to both neurons
+			hid[j].connections = append(hid[j].connections, synapse);
 		}
 	}
 	// adding the back synapses
 	// this assumes there is only one output rn..
 	for i:=0; i<len(hid);i++{
 		var synapse = new(Synapse);											// creating synapse/connection
-		synapse.front = &hid[i];
-		synapse.back = &out[0];
+		synapse.front = hid[i];
+		synapse.back = out[0];
 		synapse.value = myGaussian();
-		fmt.Println("value :%f " , synapse.value);
-		hid[i].connections = append(hid[i].connections, *synapse);			// adding synapse to both neurons
-		out[0].connections = append(out[0].connections, *synapse);
+		hid[i].connections = append(hid[i].connections, synapse);			// adding synapse to both neurons
+		out[0].connections = append(out[0].connections, synapse);
 	}
 
 }
 
-func forwardProp(nodes [] Neuron){
+func forwardProp(nodes [] *Neuron){
 	for _ , node := range nodes{
 		for _, connection := range node.connections{
 			connection.back.weight += node.weight * connection.value;
 		}
 	}
 }
-func activateNodes(nodes [] Neuron){
+func activateNodes(nodes [] *Neuron){
 	for _ , node := range nodes{
 		node.nonActivatedWeight = node.weight;
+		// fmt.Printf("%d ---activated weight = %f\n", index, node.nonActivatedWeight);
 		node.weight = sigmoidFunc(node.weight);
 	}
+	// printNonActivated(nodes);
 }
 // This backwardProp is for out Nodes to hidden nodes
-func backwardPropOut(hidNodes [] Neuron,outNodes [] Neuron, deltaOutSum float64){
+func backwardPropOut(hidNodes [] *Neuron,outNodes [] *Neuron, deltaOutSum float64){
 	// since this for a xor function..
 	// input is a const
 	// var expectedResult := strconv.ParseFloat(input[0], 64)^strconv.ParseFloat(input[1], 64);
@@ -157,22 +171,50 @@ func backwardPropOut(hidNodes [] Neuron,outNodes [] Neuron, deltaOutSum float64)
 	// var sumMarginOfError := expectedResult - calculated;
 
 	// var deltaOutputSum := derivativeSigmoid(calculated) * sumMarginOfError;
-	var deltaWeight := [len(hidNodes)] int;				// TODO!!!!! MAGIC
-	var outNode := outNodes[0];
+	var deltaWeight = make([] float64,len(hidNodes));				// TODO!!!!! MAGIC
+	//var outNode = outNodes[0];
 	// finding the delta weights for the hidden nodes
 	for index , node := range hidNodes{
-		deltaWeight[index] =deltaOutputSum * node.weight;
+		deltaWeight[index] =deltaOutSum * node.weight;
 	}
-	// adjusting new weights by adding delta weights to synpase values
+	// adjusting new weights by adding delta weights to synapse values
 	for index , connection := range outNodes[0].connections{
-		connection.value := connection.value + deltaWeight[index];
+		connection.value = connection.value + deltaWeight[index];
 	}
 
 
 
 }
-func backwardPropHid(inNodes [] Neuron, hidNodes [] Neuron, deltaHiddenSums [] float64){
-		
+func backwardPropHid(inNodes [] *Neuron, hidNodes [] *Neuron, deltaHiddenSums [] float64, input [] string){
+	var sizeOfdeltaWeights = len(input)*len(hidNodes);
+	var hiddenDeltaWeights = make([]float64,sizeOfdeltaWeights) ;
+	var counter =0;
+	for _ , weight := range input{
+		for index , _ := range deltaHiddenSums{ 
+			var intermediate, _ = strconv.ParseFloat(weight, 64);// should really print out the err if its not nil..
+			// fmt.Printf("hiddenDeltaWeights @ %d = %f * %f\n",index, intermediate, deltaHiddenSums[index]);
+			hiddenDeltaWeights[counter] = intermediate*deltaHiddenSums[index];
+			counter++;
+		}
+	}
+	// fmt.Println("HiddenDelta Sums");
+	// for index, weight := range deltaHiddenSums{
+	// 	fmt.Printf("%d :: = %f\n", index, weight);
+	// }
+
+	// fmt.Println("HIDDEN DELTA WEIGHTS...")
+	// for index , weight := range hiddenDeltaWeights{
+	// 	fmt.Printf("%d :: = %f\n", index, weight);
+	// }
+	// adjusting new weight by adding delta weights to synapse values
+	counter = 0; 		// reusing counter
+	for _ , node := range inNodes {			// This could probably be a function frankly..
+		for _ , connection := range node.connections{
+			connection.value = hiddenDeltaWeights[counter] + connection.value;
+		}
+	}
+
+
 }
 
 func myGaussian() float64{
@@ -217,45 +259,93 @@ func derivativeSigmoid(x float64) float64{
 	var intermediate = math.Pow((math.Exp(-x) + 1),2); 
 	return math.Exp(-x)/ intermediate;
 }
-
-func runSimulation(in [] Neuron, hid [] Neuron, out [] Neuron){
+// Do this a thousand time.... and see how close we are.. then run it with different input while maintaining values
+func runSimulation(in [] * Neuron, hid [] *Neuron, out [] *Neuron, input [] string){
 	// run through process
 	forwardSim(in,hid,out);
-	backwardSim(in,hid,out);
+	backwardSim(in,hid,out, input);
 	// forwardProp(in);
 	// activateNodes(hid);
 	// forwardProp(hid);
 	// activateNodes(out);
-	fmt.Println("FINAL == %f", out[0].weight);
-
+	var first, _ = strconv.Atoi(input[0]);			// dont have any error handling right now...
+	var second , _ = strconv.Atoi(input[1]);
+	var expectedResult = float64(first^second);	// should print out err if not nil   **** MAY NOT WORK>>> as its an assertion..
+	fmt.Printf("actual = %f\n", expectedResult);
+	fmt.Printf("estimated == %f\n", out[0].weight);
 
 }
 //Simulates forward propagation
-func forwardSim(in [] Neuron, hid [] Neuron, out [] Neuron){
+func forwardSim(in [] *Neuron, hid [] *Neuron, out [] *Neuron){
 	forwardProp(in);
-	activateNodes(hid);
+	// printNonActivated(hid);
+	
+	for _ , node := range hid{
+		node.nonActivatedWeight = node.weight;
+		// fmt.Printf("%d ---activated weight = %f\n", index, node.nonActivatedWeight);
+		node.weight = sigmoidFunc(node.weight);
+	}
+	
+
+	// activateNodes(hid);
+	// printNonActivated(hid);
+
 	forwardProp(hid);
 	activateNodes(out);
 }
 // Simulates backWard propagation
 
 // this should also probably take in or produce the delta output sum value
-func backwardSim(in [] Neuron, hid [] Neuron, out [] Neuron){
+func backwardSim(in [] *Neuron, hid [] *Neuron, out [] *Neuron, input [] string){
 	// gets delta output sum then uses it to calculate new values for synapses from output to hidden
-	var expectedResult := strconv.ParseFloat(input[0], 64)^strconv.ParseFloat(input[1], 64);
-	fmt.Println("expectedResult = %f", expectedResult);
-	var calculated := outNodes[0]; 
-	var sumMarginOfError := expectedResult - calculated;
-	var deltaOutputSum := derivativeSigmoid(calculated) * sumMarginOfError;
+	var first, _ = strconv.Atoi(input[0]);
+	var second , _ = strconv.Atoi(input[1]);
+	var expectedResult = float64(first^second);	// should print out err if not nil   **** MAY NOT WORK>>> as its an assertion..
+	var calculated = out[0].weight; 
+	var sumMarginOfError = expectedResult - calculated;
+	var deltaOutputSum = derivativeSigmoid(calculated) * sumMarginOfError;
 	
 	// gets delta hidden sum then uses it to calculate new values for synapses from hidden to input
 	// Delta hidden sum = delta output sum * hidden-to-outer weights * S'(hidden sum)
 
-	var deltaHiddenSums = [len(out[0].connections)] float64;
-	for index, element := range deltaHiddenSums{
-		element = deltaOutSum * out[0].connections[index].value * hid[index].nonActivatedWeight;
-	} 
+	// fmt.Println("Delta Output sum === %f", deltaOutputSum);
+	// need to save synapses from output connections so they are not overwritten they will be needed later..
+	copiedSynapsesValues := make([]*Synapse,len(out[0].connections) );
+	copy(copiedSynapsesValues, out[0].connections);
+	// for _ , element := range out{
+	// 	printSynapseValues(element.connections);
+	// }
+	// fmt.Println("Second set of values ---\n");
+	// for _ , elem := range copiedSynapsesValues{
+	// 	fmt.Printf("%f ---\n",elem.value );
+	// }
+	// fmt.Println("		non activated values----\n");
+	// for inde , elem := range hid{
+	// 	fmt.Printf("%d ==== %f\n", inde , elem.nonActivatedWeight);
+	// }
+	
 	backwardPropOut(hid,out, deltaOutputSum);
-	backwardPropHid(in, hid, deltaHiddenSums);
+	
+	var deltaHiddenSums = make([] float64,len(out[0].connections)) ;
+	for index, _ := range deltaHiddenSums{
+		// fmt.Printf("%f * %f * %f ---\n",deltaOutputSum, copiedSynapsesValues[index].value, hid[index].nonActivatedWeight);
+		deltaHiddenSums[index]= deltaOutputSum * copiedSynapsesValues[index].value * hid[index].nonActivatedWeight;
+	} 
+	
+	backwardPropHid(in, hid, deltaHiddenSums, input);
 
 }
+
+func printNonActivated(nodes [] *Neuron){
+	fmt.Println("Printing non activated nodes\n");
+	for index, elem := range nodes{
+		fmt.Printf("%d ==== %f\n", index, elem.nonActivatedWeight);
+	}
+}
+
+// func printNetwork(in [] *Neuron, hid [] *Neuron, out [] *Neuron){
+// 	fmt.Println("-------------------Printing Network--------------------- ");
+// 	for(){
+
+// 	}
+// }
