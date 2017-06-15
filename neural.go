@@ -147,8 +147,8 @@ func activateNodes(nodes [] Neuron){
 		node.weight = sigmoidFunc(node.weight);
 	}
 }
-
-func backwardProp(inNodes [] Neuron,hidNodes [] Neuron,outNodes [] Neuron, deltaOutSum float64){
+// This backwardProp is for out Nodes to hidden nodes
+func backwardPropOut(hidNodes [] Neuron,outNodes [] Neuron, deltaOutSum float64){
 	// since this for a xor function..
 	// input is a const
 	// var expectedResult := strconv.ParseFloat(input[0], 64)^strconv.ParseFloat(input[1], 64);
@@ -159,9 +159,20 @@ func backwardProp(inNodes [] Neuron,hidNodes [] Neuron,outNodes [] Neuron, delta
 	// var deltaOutputSum := derivativeSigmoid(calculated) * sumMarginOfError;
 	var deltaWeight := [len(hidNodes)] int;				// TODO!!!!! MAGIC
 	var outNode := outNodes[0];
+	// finding the delta weights for the hidden nodes
+	for index , node := range hidNodes{
+		deltaWeight[index] =deltaOutputSum * node.weight;
+	}
+	// adjusting new weights by adding delta weights to synpase values
+	for index , connection := range outNodes[0].connections{
+		connection.value := connection.value + deltaWeight[index];
+	}
 
 
 
+}
+func backwardPropHid(inNodes [] Neuron, hidNodes [] Neuron, deltaHiddenSums [] float64){
+		
 }
 
 func myGaussian() float64{
@@ -219,20 +230,32 @@ func runSimulation(in [] Neuron, hid [] Neuron, out [] Neuron){
 
 
 }
+//Simulates forward propagation
 func forwardSim(in [] Neuron, hid [] Neuron, out [] Neuron){
 	forwardProp(in);
 	activateNodes(hid);
 	forwardProp(hid);
 	activateNodes(out);
 }
+// Simulates backWard propagation
+
 // this should also probably take in or produce the delta output sum value
 func backwardSim(in [] Neuron, hid [] Neuron, out [] Neuron){
-
+	// gets delta output sum then uses it to calculate new values for synapses from output to hidden
 	var expectedResult := strconv.ParseFloat(input[0], 64)^strconv.ParseFloat(input[1], 64);
 	fmt.Println("expectedResult = %f", expectedResult);
 	var calculated := outNodes[0]; 
 	var sumMarginOfError := expectedResult - calculated;
+	var deltaOutputSum := derivativeSigmoid(calculated) * sumMarginOfError;
+	
+	// gets delta hidden sum then uses it to calculate new values for synapses from hidden to input
+	// Delta hidden sum = delta output sum * hidden-to-outer weights * S'(hidden sum)
 
-	var deltaOutputSum := derivativeSigmoid(calculated) * sumMarginOfError
-	backwardProp(in,hid,out, deltaOutputSum);
+	var deltaHiddenSums = [len(out[0].connections)] float64;
+	for index, element := range deltaHiddenSums{
+		element = deltaOutSum * out[0].connections[index].value * hid[index].nonActivatedWeight;
+	} 
+	backwardPropOut(hid,out, deltaOutputSum);
+	backwardPropHid(in, hid, deltaHiddenSums);
+
 }
